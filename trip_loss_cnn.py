@@ -1,19 +1,14 @@
-from random import randint
-
 import keras
-from keras.applications.inception_v3 import InceptionV3
-from keras.callbacks import EarlyStopping, ModelCheckpoint
-from keras.preprocessing import image
-from keras.utils import plot_model
-from keras.models import Model
-from keras.layers import Dense, GlobalAveragePooling2D, Dropout
-from keras import backend as K, Input
-from keras.preprocessing.image import ImageDataGenerator
-from keras.backend.tensorflow_backend import set_session
-import tensorflow as tf
 import numpy as np
-
-from util import make_parallel
+import tensorflow as tf
+from keras import Input
+from keras.applications.inception_v3 import InceptionV3
+from keras.backend.tensorflow_backend import set_session
+from keras.callbacks import EarlyStopping, ModelCheckpoint
+from keras.layers import Dense, GlobalAveragePooling2D, Dropout
+from keras.models import Model
+from keras.preprocessing.image import ImageDataGenerator
+from keras.utils import plot_model
 
 config = tf.ConfigProto()
 config.gpu_options.per_process_gpu_memory_fraction = 0.8
@@ -157,7 +152,7 @@ model.save('dog_inception.h5')
 
 # let's visualize layer names and layer indices to see how many layers
 # we should freeze:
-for i, layer in enumerate(base_model.layers):
+for i, layer in enumerate(model.layers):
     print(i, layer.name)
 
 # we chose to train the top 2 inception blocks, i.e. we will freeze
