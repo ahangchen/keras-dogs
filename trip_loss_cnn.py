@@ -1,6 +1,8 @@
+from random import randint
+
 import keras
 from keras.applications.inception_v3 import InceptionV3
-from keras.callbacks import EarlyStopping
+from keras.callbacks import EarlyStopping, ModelCheckpoint
 from keras.preprocessing import image
 from keras.utils import plot_model
 from keras.models import Model
@@ -33,6 +35,15 @@ train_generator = train_datagen.flow_from_directory(
         batch_size=128,
         class_mode='categorical')
 
+unshuffle_train_generator = train_datagen.flow_from_directory(
+        '/hdd/cwh/dog_keras_train',
+        # '/hdd/cwh/test1',
+        target_size=(224, 224),
+        # batch_size=1,
+        batch_size=128,
+        shuffle=False,
+        class_mode='categorical')
+
 validation_generator = test_datagen.flow_from_directory(
         '/hdd/cwh/dog_keras_valid',
         # '/hdd/cwh/test1',
@@ -42,18 +53,38 @@ validation_generator = test_datagen.flow_from_directory(
         class_mode='categorical')
 
 
-def double_generator(cur_generator):
-    while True:
-        x1, y1 = cur_generator.next()
-        if y1.shape[0] != 128:
+def double_generator(cur_generator, train=True):
+    cur_cnt = 0
+    while True:   
+        if train and cur_cnt % 4 == 1:
+            # provide same image
+            x1, y1 = unshuffle_train_generator.next()
+            if y1.shape[0] != 128:
+                x1, y1 = unshuffle_train_generator.next()
+            batch_size = 128
+            idx = np.arange(batch_size)
+            np.random.shuffle(idx)
+            x2 = list()
+            y2 = list()
+            for i2 in range(batch_size):
+                x2.append(x1[idx[i2]])
+                y2.append(y1[idx[i2]])
+            x2 = np.asarray(x2)
+            y2 = np.asarray(y2)
+            # print(x2.shape)
+            # print(y2.shape)
+        else:
             x1, y1 = cur_generator.next()
-        x2, y2 = cur_generator.next()
-        if y2.shape[0] != 128:
+            if y1.shape[0] != 128:
+                x1, y1 = cur_generator.next()
             x2, y2 = cur_generator.next()
+            if y2.shape[0] != 128:
+                x2, y2 = cur_generator.next()
         same = (np.argmax(y1, 1) == np.argmax(y2, 1)).astype(int)
-        # print(y1.shape)
-        # print(y2.shape)
-        # print(same.shape)
+        # print(np.argmax(y1, 1))
+        # print(np.argmax(y2, 1))
+        # print(same)
+        cur_cnt += 1
         yield [x1, x2], [y1, y2, same]
 
 
@@ -112,12 +143,13 @@ model.compile(optimizer='adam',
 # model = make_parallel(model, 3)
 # train the model on the new data for a few epochs
 early_stopping = EarlyStopping(monitor='val_loss', patience=5)
+check_point = ModelCheckpoint('dogs_{epoch:02d}_{val_loss:.2f}.h5', monitor='val_loss', period=3)
 model.fit_generator(double_generator(train_generator),
                     steps_per_epoch=200,
                     epochs=30,
-                    validation_data=double_generator(validation_generator),
+                    validation_data=double_generator(validation_generator, train=False),
                     validation_steps=80,
-                    callbacks=[early_stopping])
+                    callbacks=[early_stopping, check_point])
 model.save('dog_inception.h5')
 # at this point, the top layers are well trained and we can start fine-tuning
 # convolutional layers from inception V3. We will freeze the bottom N layers
@@ -151,7 +183,7 @@ model.compile(optimizer=SGD(lr=0.0001, momentum=0.9),
 model.fit_generator(double_generator(train_generator),
                     steps_per_epoch=200,
                     epochs=60,
-                    validation_data=double_generator(validation_generator),
+                    validation_data=double_generator(validation_generator, train=False),
                     validation_steps=80,
                     callbacks=[early_stopping]) # otherwise the generator would loop indefinitely
 model.save('dog_inception_tuned.h5')
