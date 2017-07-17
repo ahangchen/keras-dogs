@@ -67,7 +67,7 @@ model.fit_generator(train_generator,
                     validation_data=validation_generator,
                     validation_steps=80,
                     callbacks=[early_stopping])
-model.save('dog_inception.h5')
+model.save('dog_xception.h5')
 # at this point, the top layers are well trained and we can start fine-tuning
 # convolutional layers from inception V3. We will freeze the bottom N layers
 # and train the remaining top layers.
@@ -98,4 +98,4 @@ model.fit_generator(train_generator,
                     validation_data=validation_generator,
                     validation_steps=80,
                     callbacks=[early_stopping]) # otherwise the generator would loop indefinitely
-model.save('dog_inception_tuned.h5')
+model.save('dog_xception_tuned.h5')

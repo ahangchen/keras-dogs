@@ -2,9 +2,10 @@ import keras
 import numpy as np
 import tensorflow as tf
 from keras import Input
+from keras.applications import Xception
 from keras.applications.inception_v3 import InceptionV3
 from keras.backend.tensorflow_backend import set_session
-from keras.callbacks import EarlyStopping, ModelCheckpoint
+from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 from keras.layers import Dense, GlobalAveragePooling2D, Dropout
 from keras.models import Model
 from keras.preprocessing.image import ImageDataGenerator
@@ -15,34 +16,26 @@ config.gpu_options.per_process_gpu_memory_fraction = 0.8
 set_session(tf.Session(config=config))
 
 train_datagen = ImageDataGenerator(
+        rescale=1./255,
         shear_range=0.2,
-        rotation_range=90,
+        rotation_range=45,
         zoom_range=0.2,
         horizontal_flip=True)
 
-test_datagen = ImageDataGenerator()
+test_datagen = ImageDataGenerator(rescale=1./255)
 
 train_generator = train_datagen.flow_from_directory(
         '/hdd/cwh/dog_keras_train',
         # '/hdd/cwh/test1',
-        target_size=(224, 224),
+        target_size=(299, 299),
         # batch_size=1,
         batch_size=128,
-        class_mode='categorical')
-
-unshuffle_train_generator = train_datagen.flow_from_directory(
-        '/hdd/cwh/dog_keras_train',
-        # '/hdd/cwh/test1',
-        target_size=(224, 224),
-        # batch_size=1,
-        batch_size=128,
-        shuffle=False,
         class_mode='categorical')
 
 validation_generator = test_datagen.flow_from_directory(
         '/hdd/cwh/dog_keras_valid',
         # '/hdd/cwh/test1',
-        target_size=(224, 224),
+        target_size=(299, 299),
         # batch_size=1,
         batch_size=128,
         class_mode='categorical')
@@ -50,20 +43,45 @@ validation_generator = test_datagen.flow_from_directory(
 
 def double_generator(cur_generator, train=True):
     cur_cnt = 0
-    while True:   
+    while True:
         if train and cur_cnt % 4 == 1:
             # provide same image
-            x1, y1 = unshuffle_train_generator.next()
+            x1, y1 = train_generator.next()
             if y1.shape[0] != 128:
-                x1, y1 = unshuffle_train_generator.next()
-            batch_size = 128
-            idx = np.arange(batch_size)
-            np.random.shuffle(idx)
+                x1, y1 = train_generator.next()
+            # print(y1)
+            # print(np.sort(np.argmax(y1, 1), 0))
+            y1_labels = np.argmax(y1, 1)
+            batch_size = y1_labels.shape[0]
+            has_move = list()
+            last_not_move = list()
+            idx2 = [-1 for i in range(batch_size)]
+
+            for i, label in enumerate(y1_labels):
+                if i in has_move:
+                    continue
+                for j in range(i+1, batch_size):
+                    if y1_labels[i] == y1_labels[j]:
+                        idx2[i] = j
+                        idx2[j] = i
+                        has_move.append(i)
+                        has_move.append(j)
+                        break
+                if idx2[i] == -1:
+                    # same element not found and hasn't been moved
+                    if len(last_not_move) == 0:
+                        last_not_move.append(i)
+                        idx2[i] = i
+                    else:
+                        idx2[i] = last_not_move[-1]
+                        idx2[last_not_move[-1]] = i
+                        del last_not_move[-1]
             x2 = list()
             y2 = list()
             for i2 in range(batch_size):
-                x2.append(x1[idx[i2]])
-                y2.append(y1[idx[i2]])
+                x2.append(x1[idx2[i2]])
+                y2.append(y1[idx2[i2]])
+            # print(y2)
             x2 = np.asarray(x2)
             y2 = np.asarray(y2)
             # print(x2.shape)
@@ -84,7 +102,8 @@ def double_generator(cur_generator, train=True):
 
 
 # create the base pre-trained model
-input_tensor = Input(shape=(224, 224, 3))
+input_tensor = Input(shape=(299, 299, 3))
+# base_model = Xception(include_top=True, weights='imagenet', input_tensor=None, input_shape=None)
 base_model = InceptionV3(input_tensor=input_tensor, weights='imagenet', include_top=False)
 
 # add a global spatial average pooling layer
@@ -92,8 +111,8 @@ x = base_model.output
 x = GlobalAveragePooling2D(name='ave_pool')(x)
 
 feature = Model(inputs=base_model.input, outputs=x)
-img1 = Input(shape=(224, 224, 3), name='img_1')
-img2 = Input(shape=(224, 224, 3), name='img_2')
+img1 = Input(shape=(299, 299, 3), name='img_1')
+img2 = Input(shape=(299, 299, 3), name='img_2')
 
 feature1 = feature(img1)
 feature2 = feature(img2)
@@ -130,7 +149,7 @@ for layer in base_model.layers:
     layer.trainable = False
 
 # compile the model (should be done *after* setting layers to non-trainable)
-model.compile(optimizer='adam',
+model.compile(optimizer='nadam',
               loss={'ctg_out_1': 'categorical_crossentropy',
                     'ctg_out_2': 'categorical_crossentropy',
                     'bin_out': 'binary_crossentropy'},
@@ -138,14 +157,13 @@ model.compile(optimizer='adam',
 # model = make_parallel(model, 3)
 # train the model on the new data for a few epochs
 early_stopping = EarlyStopping(monitor='val_loss', patience=5)
-check_point = ModelCheckpoint('dogs_{epoch:02d}_{val_loss:.2f}.h5', monitor='val_loss', period=3)
 model.fit_generator(double_generator(train_generator),
                     steps_per_epoch=200,
-                    epochs=30,
+                    epochs=100,
                     validation_data=double_generator(validation_generator, train=False),
-                    validation_steps=80,
-                    callbacks=[early_stopping, check_point])
-model.save('dog_inception.h5')
+                    validation_steps=20,
+                    callbacks=[early_stopping])
+model.save('dog_xception.h5')
 # at this point, the top layers are well trained and we can start fine-tuning
 # convolutional layers from inception V3. We will freeze the bottom N layers
 # and train the remaining top layers.
@@ -174,11 +192,12 @@ model.compile(optimizer=SGD(lr=0.0001, momentum=0.9),
 
 # we train our model again (this time fine-tuning the top 2 inception blocks
 # alongside the top Dense layers
+auto_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=3, verbose=0, mode='auto', epsilon=0.0001, cooldown=0, min_lr=0)
 
 model.fit_generator(double_generator(train_generator),
                     steps_per_epoch=200,
-                    epochs=60,
+                    epochs=100,
                     validation_data=double_generator(validation_generator, train=False),
-                    validation_steps=80,
-                    callbacks=[early_stopping]) # otherwise the generator would loop indefinitely
-model.save('dog_inception_tuned.h5')
+                    validation_steps=20,
+                    callbacks=[early_stopping, auto_lr]) # otherwise the generator would loop indefinitely
+model.save('dog_xception_tuned.h5')
