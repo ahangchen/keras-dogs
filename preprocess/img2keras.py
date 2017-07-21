@@ -2,12 +2,12 @@ import os
 from shutil import copy
 
 label_cnt = 0
-img_folder = '/hdd/cwh/train2'
-train_folder = '/hdd/cwh/dog_keras_train'
-valid_folder = '/hdd/cwh/dog_keras_valid'
+img_folder = '/home/cwh/coding/data/cwh/train2'
+train_folder = '/home/cwh/coding/data/cwh/dog_keras_train'
+valid_folder = '/home/cwh/coding/data/cwh/dog_keras_valid'
 last_label = ' '
 labels = list()
-for i, file_name in enumerate(os.listdir('/hdd/cwh/train2')):
+for i, file_name in enumerate(os.listdir('/home/cwh/coding/data/cwh/train2')):
     file_path = os.path.join(img_folder, file_name)
     if os.path.isfile(file_path):
         cur_label = file_name.split('_')[0]

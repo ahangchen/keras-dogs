@@ -16,18 +16,18 @@ from os.path import exists
 
 from util import fwrite
 
-config = tf.ConfigProto()
-config.gpu_options.per_process_gpu_memory_fraction = 0.8
-set_session(tf.Session(config=config))
+# config = tf.ConfigProto()
+# config.gpu_options.per_process_gpu_memory_fraction = 0.8
+# set_session(tf.Session(config=config))
 
-batch_size = 48
-model = load_model('xception/dog_xception_tuned.h5')
-single_model = Model(inputs=model.layers[0].input, outputs=[model.layers[9].output])
+batch_size = 32
+model = load_model('xception/xception-tuned-cont09-0.82.h5')
+single_model = Model(inputs=model.layers[0].input, outputs=[model.layers[7].output])
 model = single_model
-plot_model(model, to_file='single_model.png')
+# plot_model(model, to_file='single_model.png')
 test_datagen = ImageDataGenerator(rescale=1./255,)
 valid_generator = test_datagen.flow_from_directory(
-    '/hdd/cwh/dog_keras_valid',
+    '/home/cwh/coding/data/cwh/dog_keras_valid',
     target_size=(299, 299),
     batch_size=batch_size,
     shuffle=False,
@@ -35,7 +35,7 @@ valid_generator = test_datagen.flow_from_directory(
 )
 print(valid_generator.class_indices)
 
-test_path = '/hdd/cwh/test'
+test_path = '/home/cwh/coding/data/cwh/test/2'
 label_idxs = sorted(valid_generator.class_indices.items(), key=operator.itemgetter(1))
 test_generator = test_datagen.flow_from_directory(
         test_path,
@@ -54,7 +54,7 @@ predict_path = 'predict.txt'
 if path.exists(predict_path):
     remove(predict_path)
 #
-# new_test_path = '/hdd/cwh/test_p'
+# new_test_path = '/home/cwh/coding/data/cwh/test_p'
 # if not os.path.exists(new_test_path):
 #     os.makedirs(new_test_path)
 for i, idx in enumerate(y_max_idx):

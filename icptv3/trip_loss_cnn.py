@@ -25,16 +25,16 @@ train_datagen = ImageDataGenerator(
 test_datagen = ImageDataGenerator(rescale=1./255)
 
 train_generator = train_datagen.flow_from_directory(
-        '/hdd/cwh/dog_keras_train',
-        # '/hdd/cwh/test1',
+        '/home/cwh/coding/data/cwh/dog_keras_train',
+        # '/home/cwh/coding/data/cwh/test1',
         target_size=(299, 299),
         # batch_size=1,
         batch_size=128,
         class_mode='categorical')
 
 validation_generator = test_datagen.flow_from_directory(
-        '/hdd/cwh/dog_keras_valid',
-        # '/hdd/cwh/test1',
+        '/home/cwh/coding/data/cwh/dog_keras_valid',
+        # '/home/cwh/coding/data/cwh/test1',
         target_size=(299, 299),
         # batch_size=1,
         batch_size=128,

@@ -20,7 +20,7 @@ model = load_model('xception-tuned01-0.79.h5')
 plot_model(model, to_file='single_model.png')
 test_datagen = ImageDataGenerator(rescale=1./255,)
 valid_generator = test_datagen.flow_from_directory(
-    '/hdd/cwh/dog_keras_valid',
+    '/home/cwh/coding/data/cwh/dog_keras_valid',
     target_size=(299, 299),
     batch_size=batch_size,
     shuffle=False,
@@ -31,7 +31,7 @@ print(valid_generator.class_indices)
 
 label_idxs = sorted(valid_generator.class_indices.items(), key=operator.itemgetter(1))
 test_generator = test_datagen.flow_from_directory(
-        '/hdd/cwh/test',
+        '/home/cwh/coding/data/cwh/test',
         target_size=(299, 299),
         batch_size=batch_size,
         shuffle=False,
