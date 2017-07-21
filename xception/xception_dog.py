@@ -199,10 +199,10 @@ model.compile(optimizer=SGD(lr=0.0001, momentum=0.9),
 # we train our model again (this time fine-tuning the top 2 inception blocks
 # alongside the top Dense layers
 auto_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=3, verbose=0, mode='auto', epsilon=0.0001, cooldown=0, min_lr=0)
-save_model = ModelCheckpoint('xception-tuned{epoch:02d}-{val_ctg_out_1_acc:.2f}.h5')
+save_model = ModelCheckpoint('xception-tuned-{epoch:02d}-{val_ctg_out_1_acc:.2f}.h5')
 model.fit_generator(double_generator(train_generator, batch_size=batch_size),
                     steps_per_epoch=16500/batch_size+1,
-                    epochs=100,
+                    epochs=20,
                     validation_data=double_generator(validation_generator, train=False, batch_size=batch_size),
                     validation_steps=1800/batch_size+1,
                     callbacks=[early_stopping, auto_lr, save_model]) # otherwise the generator would loop indefinitely
