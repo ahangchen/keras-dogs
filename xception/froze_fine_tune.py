@@ -2,19 +2,21 @@ import os
 
 import keras
 import numpy as np
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 import tensorflow as tf
 from keras import Input
+from keras import backend as K
 from keras.applications import Xception
 from keras.backend.tensorflow_backend import set_session
 from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
-from keras.layers import Dense, Dropout
+from keras.layers import Dense, Dropout, Lambda
 from keras.models import Model, load_model
 from keras.preprocessing.image import ImageDataGenerator
 # from keras.utils import plot_model
 
-# config = tf.ConfigProto()
-# config.gpu_options.per_process_gpu_memory_fraction = 0.8
 # set_session(tf.Session(config=config))
+from keras.utils import plot_model
 
 train_datagen = ImageDataGenerator(
         rescale=1./255,
@@ -25,9 +27,9 @@ train_datagen = ImageDataGenerator(
 
 test_datagen = ImageDataGenerator(rescale=1./255)
 
-batch_size = 24
+batch_size = 64
 train_generator = train_datagen.flow_from_directory(
-        '/home/cwh/coding/data/cwh/dog_keras_train',
+        '/hdd/cwh/dog_keras_train',
         # '/home/cwh/coding/data/cwh/test1',
         target_size=(299, 299),
         # batch_size=1,
@@ -35,7 +37,7 @@ train_generator = train_datagen.flow_from_directory(
         class_mode='categorical')
 
 validation_generator = test_datagen.flow_from_directory(
-        '/home/cwh/coding/data/cwh/dog_keras_valid',
+        '/hdd/cwh/dog_keras_valid',
         # '/home/cwh/coding/data/cwh/test1',
         target_size=(299, 299),
         # batch_size=1,
@@ -95,20 +97,32 @@ def double_generator(cur_generator, batch_size, train=True):
             if y2.shape[0] != batch_size:
                 x2, y2 = cur_generator.next()
         same = (np.argmax(y1, 1) == np.argmax(y2, 1)).astype(int)
+        one_hot_same = np.zeros([batch_size, 2])
+        one_hot_same[np.arange(batch_size), same] = 1
+        # print same
+        # print one_hot_same
         # print(np.argmax(y1, 1))
         # print(np.argmax(y2, 1))
         # print(same)
         cur_cnt += 1
-        yield [x1, x2], [y1, y2, same]
+        yield [x1, x2], [y1, y2, one_hot_same]
+
+
+def eucl_dist(inputs):
+    x, y = inputs
+    return (x - y)**2
+
+
 early_stopping = EarlyStopping(monitor='val_loss', patience=3)
-save_model = ModelCheckpoint('xception{epoch:02d}-{val_ctg_out_1_acc:.2f}.h5')
+auto_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=3, verbose=0, mode='auto', epsilon=0.0001, cooldown=0, min_lr=0)
+save_model = ModelCheckpoint('xception{epoch:02d}-{val_ctg_out_1_acc:.2f}.h5', period=2)
 if os.path.exists('dog_xception.h5'):
     model = load_model('dog_xception.h5')
 else:
     # create the base pre-trained model
     input_tensor = Input(shape=(299, 299, 3))
     base_model = Xception(include_top=True, weights='imagenet', input_tensor=None, input_shape=None)
-
+    plot_model(base_model, to_file='xception_model.png')
     base_model.layers.pop()
     base_model.outputs = [base_model.layers[-1].output]
     base_model.layers[-1].outbound_nodes = []
@@ -128,17 +142,17 @@ else:
         Dropout(0.5)(feature2)
     )
 
-    concatenated = keras.layers.concatenate([feature1, feature2])
+    # concatenated = keras.layers.concatenate([feature1, feature2])
+    dis = Lambda(eucl_dist, name='square')([feature1, feature2])
     # concatenated = Dropout(0.5)(concatenated)
     # let's add a fully-connected layer
     # x = Dense(1024, activation='relu')(concatenated)
-    x = Dropout(0.5)(concatenated)
-    judge = Dense(1, activation='sigmoid', name='bin_out')(x)
 
+    judge = Dense(2, activation='softmax', name='bin_out')(dis)
     model = Model(inputs=[img1, img2], outputs=[category_predict1, category_predict2, judge])
 
     # model.save('dog_xception.h5')
-    # plot_model(model, to_file='model_2.png')
+    plot_model(model, to_file='model_2.png')
     # first: train only the top layers (which were randomly initialized)
     # i.e. freeze all convolutional InceptionV3 layers
     for layer in base_model.layers:
@@ -148,24 +162,29 @@ else:
     model.compile(optimizer='nadam',
                   loss={'ctg_out_1': 'categorical_crossentropy',
                         'ctg_out_2': 'categorical_crossentropy',
-                        'bin_out': 'binary_crossentropy'},
+                        'bin_out': 'categorical_crossentropy'},
+                  loss_weights={
+                      'ctg_out_1': 1.,
+                      'ctg_out_2': 1.,
+                      'bin_out': 0
+                  },
                   metrics=['accuracy'])
     # model = make_parallel(model, 3)
     # train the model on the new data for a few epochs
 
     model.fit_generator(double_generator(train_generator, batch_size=batch_size),
                         steps_per_epoch=16500/batch_size+1,
-                        epochs=100,
+                        epochs=30,
                         validation_data=double_generator(validation_generator, train=False, batch_size=batch_size),
                         validation_steps=1800/batch_size+1,
-                        callbacks=[early_stopping, save_model])
+                        callbacks=[early_stopping, auto_lr, save_model])
     model.save('dog_xception.h5')
 # at this point, the top layers are well trained and we can start fine-tuning
 # convolutional layers from inception V3. We will freeze the bottom N layers
 # and train the remaining top layers.
 
 train_generator = test_datagen.flow_from_directory(
-        '/home/cwh/coding/data/cwh/dog_keras_train',
+        '/hdd/cwh/dog_keras_train',
         # '/home/cwh/coding/data/cwh/test1',
         target_size=(299, 299),
         # batch_size=1,
@@ -180,9 +199,9 @@ for i, layer in enumerate(model.layers):
 # we chose to train the top 2 inception blocks, i.e. we will freeze
 # the first 172 layers and unfreeze the rest:
 cur_base_model = model.layers[2]
-for layer in cur_base_model.layers[:66]:
+for layer in cur_base_model.layers[:105]:
     layer.trainable = False
-for layer in cur_base_model.layers[66:]:
+for layer in cur_base_model.layers[105:]:
     layer.trainable = True
 
 # we need to recompile the model for these modifications to take effect
@@ -193,17 +212,21 @@ model.compile(optimizer=SGD(lr=0.0001, momentum=0.9),
               loss={
                   'ctg_out_1': 'categorical_crossentropy',
                   'ctg_out_2': 'categorical_crossentropy',
-                  'bin_out': 'binary_crossentropy'},
+                  'bin_out': 'categorical_crossentropy'},
+              loss_weights={
+                  'ctg_out_1': 1.,
+                  'ctg_out_2': 1.,
+                  'bin_out': 0.5
+              },
               metrics=['accuracy'])
 
 # we train our model again (this time fine-tuning the top 2 inception blocks
 # alongside the top Dense layers
-auto_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=3, verbose=0, mode='auto', epsilon=0.0001, cooldown=0, min_lr=0)
-save_model = ModelCheckpoint('xception-tuned-{epoch:02d}-{val_ctg_out_1_acc:.2f}.h5')
+save_model = ModelCheckpoint('xception-tuned-{epoch:02d}-{val_ctg_out_1_acc:.2f}.h5', period=2)
 model.fit_generator(double_generator(train_generator, batch_size=batch_size),
                     steps_per_epoch=16500/batch_size+1,
-                    epochs=20,
+                    epochs=30,
                     validation_data=double_generator(validation_generator, train=False, batch_size=batch_size),
                     validation_steps=1800/batch_size+1,
-                    callbacks=[early_stopping, auto_lr, save_model]) # otherwise the generator would loop indefinitely
+                    callbacks=[auto_lr, save_model]) # otherwise the generator would loop indefinitely
 model.save('dog_xception_tuned.h5')

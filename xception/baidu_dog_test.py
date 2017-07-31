@@ -1,14 +1,16 @@
 import shutil
+import os
 
 from keras.backend import set_session
 from keras.models import load_model
 from keras.models import Model
 from keras.utils import plot_model
 from keras.preprocessing.image import ImageDataGenerator
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 import tensorflow as tf
 import numpy as np
 import operator
-import os
 
 from os import remove, path
 
@@ -19,15 +21,16 @@ from util import fwrite
 # config = tf.ConfigProto()
 # config.gpu_options.per_process_gpu_memory_fraction = 0.8
 # set_session(tf.Session(config=config))
-
-batch_size = 32
-model = load_model('xception/xception-tuned-cont09-0.82.h5')
-single_model = Model(inputs=model.layers[0].input, outputs=[model.layers[7].output])
+batch_size = 64
+# model = load_model('xception/xception-tuned-cont09-0.82.h5')
+model = load_model('xception/dog_xception_tuned_cont.h5')
+# model = load_model('xception/xception-tuned-cont-froze-03-0.84.h5')
+single_model = Model(inputs=model.layers[0].input, outputs=[model.layers[6].output])
 model = single_model
 # plot_model(model, to_file='single_model.png')
 test_datagen = ImageDataGenerator(rescale=1./255,)
 valid_generator = test_datagen.flow_from_directory(
-    '/home/cwh/coding/data/cwh/dog_keras_valid',
+    '/hdd/cwh/dog_keras_valid',
     target_size=(299, 299),
     batch_size=batch_size,
     shuffle=False,
@@ -35,7 +38,7 @@ valid_generator = test_datagen.flow_from_directory(
 )
 print(valid_generator.class_indices)
 
-test_path = '/home/cwh/coding/data/cwh/test/2'
+test_path = '/hdd/cwh/test'
 label_idxs = sorted(valid_generator.class_indices.items(), key=operator.itemgetter(1))
 test_generator = test_datagen.flow_from_directory(
         test_path,
