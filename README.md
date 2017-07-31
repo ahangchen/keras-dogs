@@ -54,7 +54,7 @@ So we simply swap those samples to construct positive samples.
   - Train: [single_model.py](single/single_model.py)
   - Test: [single_model_test.py](single/single_model_test.py)
 - Multi loss Model
-  - Froze and fine-tuning: [xception_dog.py](xception/froze_fine_tune.py)
+  - Froze and fine-tuning: [froze_fine_tune.py](xception/froze_fine_tune.py)
   - Fine tune with some trick: [trick_tune.py](xception/trick_tune.py)
   - Test: [baidu_dog_test.py](xception/baidu_dog_test.py)
 
