@@ -73,7 +73,7 @@ else:
     model = Model(inputs=[img1], outputs=[category_predict1])
 
     # model.save('dog_xception.h5')
-    plot_model(model, to_file='model_2.png')
+    plot_model(model, to_file='model_combined.png')
     # first: train only the top layers (which were randomly initialized)
     # i.e. freeze all convolutional InceptionV3 layers
     for layer in base_model.layers:
