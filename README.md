@@ -2,6 +2,8 @@
 
 > author: [cweihang](https://github.com/ahangchen)
 
+Star this repository if you find it helpful, thank you.
+
 Language: [English](README.md)/[简体中文](README_cn.md)
 ## About
 This is a dog classification competition held by Baidu. Competition URL: http://js.baidu.com/
