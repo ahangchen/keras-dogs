@@ -37,7 +37,7 @@ This is a dog classification competition held by Baidu. Competition URL: http://
   - Training Set: http://pan.baidu.com/s/1slLOqBz Key: 5axb
   - Test set: http://pan.baidu.com/s/1gfaf9rt Key：fl5n
 - Place the images with the same class into same directory, for using ImageDataGenerator.
-- Because I named the images with the format "typeid_randhash.jpg", I wrote img2keras.py for the work described above.
+- Because I named the images with the format "typeid_randhash.jpg", I wrote [img2keras.py](preprocess/img2keras.py) for the work described above.
 - There are more details to handle. If you meet any error, refer the Keras document first. If you still have some question, you can create an [issue](https://github.com/ahangchen/keras-dogs/issues).
 
 ## Training
@@ -54,7 +54,7 @@ So we simply swap those samples to construct positive samples.
   - Train: [single_model.py](single/single_model.py)
   - Test: [single_model_test.py](single/single_model_test.py)
 - Multi loss Model
-  - Froze and fine-tuning: [xception_dog.py](xception/xception_dog.py)
+  - Froze and fine-tuning: [xception_dog.py](xception/froze_fine_tune.py)
   - Fine tune with some trick: [trick_tune.py](xception/trick_tune.py)
   - Test: [baidu_dog_test.py](xception/baidu_dog_test.py)
 

@@ -57,7 +57,7 @@ Language: [English](README.md)/[简体中文](README_cn.md)
   - 训练: [single_model.py](single/single_model.py)
   - 测试: [single_model_test.py](single/single_model_test.py)
 - Multi loss模型
-  - 冻结训练全连接层+微调卷积层: [xception_dog.py](xception/xception_dog.py)
+  - 冻结训练全连接层+微调卷积层: [xception_dog.py](xception/froze_fine_tune.py)
   - Trick微调: [trick_tune.py](xception/trick_tune.py)
   - 测试: [baidu_dog_test.py](xception/baidu_dog_test.py)
 
