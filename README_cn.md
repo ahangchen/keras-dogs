@@ -67,3 +67,4 @@ Language: [English](README.md)/[简体中文](README_cn.md)
 - Xception, 混合模型: 0.211
 - Xception, 混合模型,最后去掉数据增广再训练: 0.2045
 
+> 如果发现代码里有bug，麻烦开个issue告诉我或者来个PR修复一下也行，万分感谢！

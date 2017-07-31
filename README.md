@@ -65,3 +65,5 @@ So we simply swap those samples to construct positive samples.
 - Xception, softmax loss: 0.2235
 - Xception, multi loss: 0.211
 - Xception, multi loss, fine tune without data argumentation: 0.2045
+
+> If you find some bug in this code, create an issue or a pull request to fix it, thanks!
