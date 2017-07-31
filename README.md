@@ -59,4 +59,7 @@ So we simply swap those samples to construct positive samples.
   - Test: [baidu_dog_test.py](xception/baidu_dog_test.py)
 
 ## Result
-- Test error: 0.2045
+- InceptionV3, softmax loss: 0.2502
+- Xception, softmax loss: 0.2235
+- Xception, multi loss: 0.211
+- Xception, multi loss, fine tune without data argumentation: 0.2045
