@@ -1,49 +1,46 @@
 import os
 
-import keras
-import numpy as np
-import tensorflow as tf
 from keras import Input
 from keras.applications import Xception
-from keras.backend.tensorflow_backend import set_session
 from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 from keras.layers import Dense, Dropout
 from keras.models import Model, load_model
+from keras.optimizers import SGD
 from keras.preprocessing.image import ImageDataGenerator
 from keras.utils import plot_model
-from keras.optimizers import SGD
-
-config = tf.ConfigProto()
-config.gpu_options.per_process_gpu_memory_fraction = 0.8
-set_session(tf.Session(config=config))
 
 train_datagen = ImageDataGenerator(
-        rescale=1./255,
-        shear_range=0.2,
-        rotation_range=45,
-        zoom_range=0.2,
-        horizontal_flip=True)
+    rescale=1. / 255,
+    shear_range=0.2,
+    width_shift_range=0.4,
+    height_shift_range=0.4,
+    rotation_range=90,
+    zoom_range=0.2,
+    horizontal_flip=True,
+    vertical_flip=True)
 
-test_datagen = ImageDataGenerator(rescale=1./255)
+test_datagen = ImageDataGenerator(rescale=1. / 255)
 
-batch_size = 48
+batch_size = 96
 train_generator = train_datagen.flow_from_directory(
-        '/home/cwh/coding/data/cwh/dog_keras_train',
-        # '/home/cwh/coding/data/cwh/test1',
-        target_size=(299, 299),
-        # batch_size=1,
-        batch_size=batch_size,
-        class_mode='categorical')
+    '/hdd/cwh/dog_keras_train',
+    # '/home/cwh/coding/data/cwh/test1',
+    target_size=(299, 299),
+    # batch_size=1,
+    batch_size=batch_size,
+    class_mode='categorical')
 
 validation_generator = test_datagen.flow_from_directory(
-        '/home/cwh/coding/data/cwh/dog_keras_valid',
-        # '/home/cwh/coding/data/cwh/test1',
-        target_size=(299, 299),
-        # batch_size=1,
-        batch_size=batch_size,
-        class_mode='categorical')
+    '/hdd/cwh/dog_keras_valid',
+    # '/home/cwh/coding/data/cwh/test1',
+    target_size=(299, 299),
+    # batch_size=1,
+    batch_size=batch_size,
+    class_mode='categorical')
 
 early_stopping = EarlyStopping(monitor='val_loss', patience=3)
+auto_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=3, verbose=0, mode='auto', epsilon=0.0001,
+                            cooldown=0, min_lr=0)
 
 if os.path.exists('dog_single_xception.h5'):
     model = load_model('dog_single_xception.h5')
@@ -64,16 +61,14 @@ else:
     # let's add a fully-connected layer
     category_predict1 = Dense(100, activation='softmax', name='ctg_out_1')(
         Dropout(0.5)(
-            Dense(1024, activation='relu')(
-                feature1
-            )
+            feature1
         )
     )
 
     model = Model(inputs=[img1], outputs=[category_predict1])
 
     # model.save('dog_xception.h5')
-    plot_model(model, to_file='model_combined.png')
+    plot_model(model, to_file='single_model.png')
     # first: train only the top layers (which were randomly initialized)
     # i.e. freeze all convolutional InceptionV3 layers
     for layer in base_model.layers:
@@ -87,11 +82,11 @@ else:
     # train the model on the new data for a few epochs
 
     model.fit_generator(train_generator,
-                        steps_per_epoch=200,
-                        epochs=100,
+                        steps_per_epoch=16500 / batch_size + 1,
+                        epochs=30,
                         validation_data=validation_generator,
-                        validation_steps=20,
-                        callbacks=[early_stopping])
+                        validation_steps=1800 / batch_size + 1,
+                        callbacks=[early_stopping, auto_lr])
     model.save('dog_single_xception.h5')
 # at this point, the top layers are well trained and we can start fine-tuning
 # convolutional layers from inception V3. We will freeze the bottom N layers
@@ -105,9 +100,9 @@ for i, layer in enumerate(model.layers):
 # we chose to train the top 2 inception blocks, i.e. we will freeze
 # the first 172 layers and unfreeze the rest:
 cur_base_model = model.layers[1]
-for layer in cur_base_model.layers[:66]:
+for layer in cur_base_model.layers[:105]:
     layer.trainable = False
-for layer in cur_base_model.layers[66:]:
+for layer in cur_base_model.layers[105:]:
     layer.trainable = True
 
 # we need to recompile the model for these modifications to take effect
@@ -119,12 +114,11 @@ model.compile(optimizer=SGD(lr=0.0001, momentum=0.9),
 
 # we train our model again (this time fine-tuning the top 2 inception blocks
 # alongside the top Dense layers
-auto_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=3, verbose=0, mode='auto', epsilon=0.0001, cooldown=0, min_lr=0)
 save_model = ModelCheckpoint('xception-tuned{epoch:02d}-{val_acc:.2f}.h5')
 model.fit_generator(train_generator,
-                    steps_per_epoch=200,
-                    epochs=100,
+                    steps_per_epoch=16500 / batch_size + 1,
+                    epochs=30,
                     validation_data=validation_generator,
-                    validation_steps=20,
-                    callbacks=[early_stopping, auto_lr, save_model]) # otherwise the generator would loop indefinitely
+                    validation_steps=1800 / batch_size + 1,
+                    callbacks=[early_stopping, auto_lr, save_model])  # otherwise the generator would loop indefinitely
 model.save('dog_single_xception_tuned.h5')
