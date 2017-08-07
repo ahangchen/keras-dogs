@@ -34,7 +34,7 @@ validation_generator = test_datagen.flow_from_directory(
 
 
 
-def double_generator(cur_generator, batch_size, train=True):
+def pair_generator(cur_generator, batch_size, train=True):
     cur_cnt = 0
     while True:
         if train and cur_cnt % 4 == 1:
@@ -127,10 +127,10 @@ early_stopping = EarlyStopping(monitor='val_loss', patience=6)
 auto_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=3, verbose=0, mode='auto', epsilon=0.0001, cooldown=0, min_lr=0)
 my_lr = LearningRateScheduler(lr_decay)
 save_model = ModelCheckpoint('xception-tuned-cont{epoch:02d}-{val_ctg_out_1_acc:.2f}.h5')
-model.fit_generator(double_generator(train_generator, batch_size=batch_size),
+model.fit_generator(pair_generator(train_generator, batch_size=batch_size),
                     steps_per_epoch=16500/batch_size+1,
                     epochs=10,
-                    validation_data=double_generator(validation_generator, batch_size=batch_size),
+                    validation_data=pair_generator(validation_generator, batch_size=batch_size),
                     validation_steps=20,
                     callbacks=[my_lr, save_model]) # otherwise the generator would loop indefinitely
 model.save('dog_xception_tuned_cont.h5')

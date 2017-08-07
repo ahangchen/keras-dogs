@@ -45,7 +45,7 @@ validation_generator = test_datagen.flow_from_directory(
         class_mode='categorical')
 
 
-def double_generator(cur_generator, batch_size, train=True):
+def pair_generator(cur_generator, batch_size, train=True):
     cur_cnt = 0
     while True:
         if train and cur_cnt % 4 == 1:
@@ -172,10 +172,10 @@ else:
     # model = make_parallel(model, 3)
     # train the model on the new data for a few epochs
 
-    model.fit_generator(double_generator(train_generator, batch_size=batch_size),
+    model.fit_generator(pair_generator(train_generator, batch_size=batch_size),
                         steps_per_epoch=16500/batch_size+1,
                         epochs=30,
-                        validation_data=double_generator(validation_generator, train=False, batch_size=batch_size),
+                        validation_data=pair_generator(validation_generator, train=False, batch_size=batch_size),
                         validation_steps=1800/batch_size+1,
                         callbacks=[early_stopping, auto_lr, save_model])
     model.save('dog_xception.h5')
@@ -223,10 +223,10 @@ model.compile(optimizer=SGD(lr=0.0001, momentum=0.9),
 # we train our model again (this time fine-tuning the top 2 inception blocks
 # alongside the top Dense layers
 save_model = ModelCheckpoint('xception-tuned-{epoch:02d}-{val_ctg_out_1_acc:.2f}.h5', period=2)
-model.fit_generator(double_generator(train_generator, batch_size=batch_size),
+model.fit_generator(pair_generator(train_generator, batch_size=batch_size),
                     steps_per_epoch=16500/batch_size+1,
                     epochs=30,
-                    validation_data=double_generator(validation_generator, train=False, batch_size=batch_size),
+                    validation_data=pair_generator(validation_generator, train=False, batch_size=batch_size),
                     validation_steps=1800/batch_size+1,
                     callbacks=[auto_lr, save_model]) # otherwise the generator would loop indefinitely
 model.save('dog_xception_tuned.h5')
