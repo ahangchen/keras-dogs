@@ -38,6 +38,9 @@ This is a dog classification competition held by Baidu. Competition URL: http://
 - Download the images from Baidu Cloud
   - Training Set: http://pan.baidu.com/s/1slLOqBz Key: 5axb
   - Test set: http://pan.baidu.com/s/1gfaf9rt Key：fl5n
+  
+> Previous link was provided by Baidu and only Baidu has the rights to spread the data, thus I can not provide the data anymore if Baidu canceled the link shared. You can refer to http://dianshi.baidu.com/gemstone/competitions/detail?raceId=17 with another newly published dataset on which you can apply the same algorithm.
+
 - Place the images with the same class into same directory, for using ImageDataGenerator.
 - Because I named the images with the format "typeid_randhash.jpg", I wrote [img2keras.py](preprocess/img2keras.py) for the work described above.
 - There are more details to handle. If you meet any error, refer the Keras document first. If you still have some question, you can create an [issue](https://github.com/ahangchen/keras-dogs/issues).
