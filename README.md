@@ -39,7 +39,7 @@ This is a dog classification competition held by Baidu. Competition URL: http://
   - Training Set: http://pan.baidu.com/s/1slLOqBz Key: 5axb
   - Test set: http://pan.baidu.com/s/1gfaf9rt Key：fl5n
   
-> Previous link was provided by Baidu and only Baidu has the rights to spread the data, thus I can not provide the data anymore if Baidu canceled the link shared. You can refer to http://dianshi.baidu.com/gemstone/competitions/detail?raceId=17 with another newly published dataset on which you can apply the same algorithm.
+> Previous link was provided by Baidu and only Baidu has the rights to spread the data, thus I can not provide the data anymore if Baidu canceled the link shared. You can refer to http://dianshi.baidu.com/gemstone/competitions/detail?raceId=17 with another newly published dataset on which you can apply the same algorithm. You can also apply this model on Person ReID dataset [Market1501](http://www.liangzheng.org/Project/project_reid.html). But you should do some processing on the data. You can refer to part of our CVPR paper code: [rank-reid](https://github.com/ahangchen/rank-reid)
 
 - Place the images with the same class into same directory, for using ImageDataGenerator.
 - Because I named the images with the format "typeid_randhash.jpg", I wrote [img2keras.py](preprocess/img2keras.py) for the work described above.
